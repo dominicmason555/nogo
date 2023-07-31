@@ -1,0 +1,78 @@
+body {
+    font-family: sans-serif;
+    font-size: 1rem;
+    background-color: #1c1b22;
+    color: #dddddd;
+}
+
+article {
+    font-family: sans-serif;
+    line-height: 1.2em;
+    letter-spacing: 0.3px;
+}
+
+@media only screen and (min-width: 51rem) {
+    body {
+        width: 50rem;
+        margin: auto;
+        font-size: 1.2rem;
+        letter-spacing: 0.3px;
+        line-height: 1.3em;
+    }
+}
+
+.header p {
+    font-size: 1.2em;
+    margin-bottom: 2em;
+    text-decoration: underline wavy #808080;
+    font-style: italic;
+}
+
+.footer {
+    margin-bottom: 15rem;
+}
+
+.footlink {
+    color: inherit;
+    font-size: 1em;
+    margin-right: 2em;
+    white-space: nowrap;
+}
+
+.plain {
+    color: inherit;
+}
+
+hr {
+    margin-top: 2em;
+    margin-bottom: 2em;
+}
+
+ul {
+    list-style-type: none;
+    margin: 0;
+    line-height: 1.7em;
+    padding: 0;
+}
+
+.title a {
+    color: inherit;
+    text-decoration: none;
+}
+
+h3 {
+    letter-spacing: 1px;
+    margin-top: 2em;
+    color: #eeeeee;
+}
+
+h2 {
+    letter-spacing: 1px;
+    margin-top: 2em;
+    color: #eeeeee;
+}
+
+h1 {
+    letter-spacing: 1px;
+    color: #eeeeee;
+}

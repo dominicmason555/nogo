@@ -1,0 +1,8 @@
+{:paths ["src"]
+ :deps
+  {selmer/selmer {:mvn/version "0.7.9"}
+   clj-commons/fs {:mvn/version "1.6.307"}
+   org.clj-commons/hickory {:mvn/version "0.7.3"}
+   hiccup/hiccup {:mvn/version "1.0.5"}
+   enlive/enlive {:mvn/version "1.1.6"}
+   clj-http/clj-http {:mvn/version "3.12.3"}}}
