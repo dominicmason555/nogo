@@ -32,6 +32,10 @@ article {
     margin-bottom: 15rem;
 }
 
+.footer p {
+    padding-bottom: 1.5em;
+}
+
 .footlink {
     color: inherit;
     font-size: 1em;
@@ -41,6 +45,8 @@ article {
 
 .plain {
     color: inherit;
+    letter-spacing: 0.8px;
+    font-weight: bolder;
 }
 
 hr {
@@ -48,7 +54,7 @@ hr {
     margin-bottom: 2em;
 }
 
-ul {
+ul .linklist {
     list-style-type: none;
     margin: 0;
     line-height: 1.7em;
