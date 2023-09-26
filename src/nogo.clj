@@ -92,7 +92,7 @@
   [rendered-pages]
   (println (count rendered-pages) "pages")
   (output-twtxt rendered-pages)
-  (map output-html rendered-pages))
+  (mapv output-html rendered-pages))
 
 
 (defn -main []

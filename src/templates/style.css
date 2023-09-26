@@ -26,6 +26,12 @@ article {
     margin-bottom: 2em;
     text-decoration: underline wavy #808080;
     font-style: italic;
+    color: inherit;
+}
+
+.header a {
+    text-decoration: underline wavy #808080;
+    color: inherit;
 }
 
 .footer {
