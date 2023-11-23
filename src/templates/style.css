@@ -88,3 +88,19 @@ h1 {
     letter-spacing: 1px;
     color: #eeeeee;
 }
+
+.fullwidth {
+    width:95%;
+    height:200%;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.halfwidth {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 55%;
+    height: auto;
+}
