@@ -2,26 +2,27 @@
   (:require [clojure.string :as string]
             [me.raynes.fs :as fs]
             [hickory.core :as hick]
-            [net.cgrand.enlive-html :as html]))
+            [hickory.render :refer [hickory-to-html]]
+            [cljstache.core :as stache]))
 
 
 ;;;; Static site generator: takes a folder of HTML files and turns them into a
 ;;;; folder of HTML files. Also creates a TWTXT feed.
 
 
-(def templates_dir "./src/templates/")
+(def templates_dir "./site/templates/")
 (def content_dir "./site/input/")
 (def output_dir "./site/output/")
 (def feeds_dir "./site/feeds/")
 
 
-(html/deftemplate templ-article "templates/template_base.html"
-  [templates article frontmatter]
-  [:head :title] (html/content (str "Domson.dev - " (:data-title frontmatter)))
-  [:head :style] (html/html-content (templates "style"))
-  [:body :div.header] (html/html-content (templates "header"))
-  [:body :main] (html/content article)
-  [:body :div.footer] (html/html-content (templates "footer")))
+;(html/deftemplate templ-article templates_dir_dir
+;  [templates article frontmatter]
+;  [:head :title] (html/content (str "Domson.dev - " (:data-title frontmatter)))
+;  [:head :style] (html/html-content (templates "style"))
+;  [:body :div.header] (html/html-content (templates "header"))
+;  [:body :main] (html/content article)
+;  [:body :div.footer] (html/html-content (templates "footer")))
 
 
 (defn get-templates "Gets a map of template file names to paths" []
@@ -49,8 +50,13 @@
 
 (defn render-project-page "Associates the :rendered template in the page map"
   [templates page]
-  (let [rendered (string/join
-                  (templ-article templates (:article page) (:frontmatter page)))]
+  (let [rendered (stache/render
+                   (templates "template_base")
+                   {:title (str "Domson.dev - " (:data-title (:frontmatter page)))
+                    :style (templates "style")
+                    :header (templates "header")
+                    :main (mapv hickory-to-html (:article page))
+                    :footer (templates "footer")})]
     (assoc page :rendered rendered)))
 
 
@@ -97,6 +103,7 @@
 
 (defn -main []
   (println "Nogo Static Site Generator")
+  (println (str fs/*cwd* "/site/templates/template_base.html"))
   (let [pages (map slurp (fs/list-dir content_dir))
         templates (get-templates)
         rendered (map #(render-page templates %) pages)]
