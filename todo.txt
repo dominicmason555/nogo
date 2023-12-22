@@ -1,0 +1,7 @@
+(B) Add blog article type
+(B) Materialise post metadata next to parsed EDN in map
+x (A) Change output folder
+x (A) Move metadata to separate EDN file
+x (A) Remove all HTML parsing
+x (A) Remove repl-cmd inconsistency, by using `doseq` or `run!`
+x (A) Remove site folder from gitignore
