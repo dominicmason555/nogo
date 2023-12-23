@@ -10,8 +10,22 @@
 (defn output-rendered "Loops over the pages to rendering and outputting them"
   [data]
   (doseq [folder (vals ((data :data) :folders))]
-    (let [templfolder (fs/file (folder :outfolder) "template")]
-      (pprint templfolder))))
+    (println (str "Outputting folder: " (folder :name)))
+    (let [infolder (fs/file (data :rootpath) "input")
+          templfolder (fs/file infolder (folder :infolder) "template")
+          basefile (slurp (fs/file templfolder (folder :template)))
+          stylefile (slurp (fs/file templfolder (folder :style)))
+          header (slurp (fs/file templfolder (folder :header)))
+          outfolder (fs/file (data :rootpath) "output" (folder :outfolder))]
+      (fs/mkdirs outfolder)
+      (doseq [page (folder :pages)]
+        (let [outfile (fs/file outfolder (page :file))
+              main (slurp (fs/file infolder (folder :infolder) (page :file)))
+              rendered (stache/render basefile {:style stylefile
+                                                :header header
+                                                :main main})]
+          (println (str "Rendering " outfile))
+          (spit outfile rendered))))))
 
 (defn page-to-twtxt "Creates a TWTXT entry from a page"
   [page]
@@ -32,12 +46,12 @@
   (let [filepath (fs/file path "input" "nogo.edn")
         nogofile (slurp filepath)
         parsed (edn/read-string nogofile)]
-    {:data parsed}))
+    {:data parsed :rootpath (fs/file path)}))
 
 (defn generate-everything [path]
   (println "Scanning" (str path))
   (let [data (get-data path)]
-    (pprint (map page-to-twtxt (get-meta data)))
+    (println (string/join "\n" (map page-to-twtxt (get-meta data))))
     (output-rendered data)))
 
 (defn usage []
