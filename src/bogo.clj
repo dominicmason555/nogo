@@ -16,6 +16,7 @@
           basefile (slurp (fs/file templfolder (folder :template)))
           stylefile (slurp (fs/file templfolder (folder :style)))
           header (slurp (fs/file templfolder (folder :header)))
+          footer (slurp (fs/file templfolder (folder :footer)))
           outfolder (fs/file (data :rootpath) "output" (folder :outfolder))]
       (fs/mkdirs outfolder)
       (doseq [page (folder :pages)]
@@ -23,6 +24,7 @@
               main (slurp (fs/file infolder (folder :infolder) (page :file)))
               rendered (stache/render basefile {:style stylefile
                                                 :header header
+                                                :footer footer
                                                 :main main})]
           (println (str "Rendering " outfile))
           (spit outfile rendered))))))
@@ -41,6 +43,15 @@
           url (str root "/" folderstr (page :file))]
       (merge page {:folder (folder :name) :url url}))))
 
+(defn generate-twtxt "Generates and outputs the TWTXT feed"
+  [data]
+  (let [outfolder (fs/file (data :rootpath) "output" ((data :data) :feedsdir))
+        outfile (fs/file outfolder "twtxt.txt")
+        twtxt (string/join "\n" (map page-to-twtxt (get-meta data)))]
+    (fs/mkdirs outfolder)
+    (println (str "Outputting Feed: " outfile))
+    (spit outfile twtxt)))
+
 (defn get-data "Parses the Nogo EDN file"
   [path]
   (let [filepath (fs/file path "input" "nogo.edn")
@@ -48,11 +59,15 @@
         parsed (edn/read-string nogofile)]
     {:data parsed :rootpath (fs/file path)}))
 
-(defn generate-everything [path]
+(defn generate-everything "Runs functions to generate feeds and pages"
+  [path]
   (println "Scanning" (str path))
   (let [data (get-data path)]
-    (println (string/join "\n" (map page-to-twtxt (get-meta data))))
-    (output-rendered data)))
+    (println "Generating feeds")
+    (generate-twtxt data)
+    (println "Generating pages")
+    (output-rendered data))
+  (println "Generation complete"))
 
 (defn usage []
   (println "Usage:")
