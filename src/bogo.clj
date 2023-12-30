@@ -2,6 +2,7 @@
   (:require [clojure.string :as string]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.data.json :as json]
             [clojure.pprint :refer [pprint]]
             [me.raynes.fs :as fs]
             [hickory.core :as hick]
@@ -32,10 +33,6 @@
           (println (str "Outputting page: " outfile))
           (spit outfile rendered))))))
 
-(defn page-to-twtxt "Creates a TWTXT entry from a page"
-  [page]
-  (str (page :date) "T00:00\t" (page :title) " " (page :url)))
-
 (defn get-meta "Makes a list of metadata for each page, for feeds"
   [data]
   (for [folder (vals ((data :data) :folders))
@@ -46,37 +43,70 @@
           url (str root "/" folderstr (page :file))]
       (merge page {:folder (folder :name) :url url}))))
 
+(defn page-to-twtxt "Creates a TWTXT entry from a page"
+  [page]
+  (str (page :date) "T00:00Z\t" (page :title) " " (page :url)))
+
 (defn generate-twtxt "Generates and outputs the TWTXT feed"
-  [data]
-  (let [outfolder (fs/file (data :rootpath) "output" ((data :data) :feedsdir))
-        outfile (fs/file outfolder "twtxt.txt")
-        twtxt (string/join "\n" (map page-to-twtxt (get-meta data)))]
-    (fs/mkdirs outfolder)
+  [info]
+  (let [outfile (fs/file (info :outfolder) "twtxt.txt")
+        twtxt (string/join "\n" (map page-to-twtxt (info :entries)))]
     (println (str "Outputting feed: " outfile))
+    (fs/mkdirs (info :outfolder))
     (spit outfile twtxt)))
 
-(defn generate-atom "Generates and outputs the ATOM feed"
-  [data time]
-  (let [outfolder (fs/file (data :rootpath) "output" ((data :data) :feedsdir))
-        outfile (fs/file outfolder "atom.xml")
-        template (slurp atom-template)
-        posts (get-meta data)
-        authorname (get-in data [:data :authorname])
-        feedid (get-in data [:data :feedid])
-        feedtitle (get-in data [:data :title])
-        feedlink (get-in data [:data :url])
-        selflink (string/join "/" [(get-in data [:data :url])
-                                   (get-in data [:data :feedsdir]) "atom.xml"])
-        rendered (stache/render template {:entries posts
-                                          :feedtitle feedtitle
-                                          :feedlink feedlink
-                                          :selflink selflink
-                                          :authorname authorname
-                                          :feedid feedid
-                                          :updated time})]
-    (fs/mkdirs outfolder)
+(defn page-to-json "Creates a JSON feed item from a page"
+  [page]
+  {:id (page :url)
+   :title (page :title)
+   :url (page :url)
+   :content_text (page :summary)
+   :tags [(page :folder)]
+   :date_published (str (page :date) "T00:00Z")})
+
+(defn generate-jsonfeed "Generates and outputs the JSON feed"
+  [info]
+  (let [outfile (fs/file (info :outfolder) "feed.json")
+        entries (map page-to-json (info :entries))
+        feedmap {:version "https://jsonfeed.org/version/1.1"
+                 :title (info :feedtitle)
+                 :home_page_url (info :feedlink)
+                 :feed_url (info :selflink)
+                 :authors [{:name (info :authorname)}]
+                 :items entries}]
     (println (str "Outputting feed: " outfile))
+    (spit outfile (json/write-str feedmap))))
+
+(defn generate-atom "Generates and outputs the ATOM feed"
+  [info]
+  (let [outfile (fs/file (info :outfolder) "atom.xml")
+        rendered (stache/render (slurp atom-template)
+                                {:entries (info :entries)
+                                 :feedtitle (info :feedtitle)
+                                 :feedlink (info :feedlink)
+                                 :selflink (str (info :selflink) "/atom.xml")
+                                 :authorname (info :authorname)
+                                 :feedid (info :feedid)
+                                 :updated (info :updated)})]
+    (println (str "Outputting feed: " outfile))
+    (fs/mkdirs (info :outfolder))
     (spit outfile rendered)))
+
+(defn generate-feeds "Generates and outputs the ATOM feed"
+  [data time]
+  (let [info {:outfolder (fs/file (data :rootpath) "output"
+                                  ((data :data) :feedsdir))
+              :entries (get-meta data)
+              :updated time
+              :authorname (get-in data [:data :authorname])
+              :feedid (get-in data [:data :feedid])
+              :feedtitle (get-in data [:data :title])
+              :feedlink (get-in data [:data :url])
+              :selflink (string/join "/" [(get-in data [:data :url])
+                                          (get-in data [:data :feedsdir])])}]
+    (generate-atom info)
+    (generate-jsonfeed info)
+    (generate-twtxt info)))
 
 (defn get-data "Parses the Nogo EDN file"
   [path]
@@ -90,9 +120,8 @@
   (println "Scanning" (str path))
   (let [data (get-data path)]
     (println "Generating feeds")
-    (generate-twtxt data)
-    (generate-atom data (.. (java.time.ZonedDateTime/now)
-                            (format java.time.format.DateTimeFormatter/ISO_INSTANT)))
+    (generate-feeds data (.. (java.time.ZonedDateTime/now)
+                             (format java.time.format.DateTimeFormatter/ISO_INSTANT)))
     (println "Generating pages")
     (output-rendered data))
   (println "Generation complete"))
