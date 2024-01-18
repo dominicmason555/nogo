@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet href="atom.xsl" type="text/xsl"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title>{{feedtitle}}</title>
-  <link href="{{feedlink}}"/>
+  <link rel="alternate" href="{{feedlink}}"/>
   <link rel="self" href="{{selflink}}"/>
   <updated>{{updated}}</updated>
   <author>
