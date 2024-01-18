@@ -104,9 +104,9 @@
               :feedlink (get-in data [:data :url])
               :selflink (string/join "/" [(get-in data [:data :url])
                                           (get-in data [:data :feedsdir])])}]
+    (generate-twtxt info)
     (generate-atom info)
-    (generate-jsonfeed info)
-    (generate-twtxt info)))
+    (generate-jsonfeed info)))
 
 (defn get-data "Parses the Nogo EDN file"
   [path]
@@ -115,13 +115,17 @@
         parsed (edn/read-string nogofile)]
     {:data parsed :rootpath (fs/file path)}))
 
+(defn whats-the-time "Finds the time in RFC3339"
+  []
+  (.. (java.time.ZonedDateTime/now)
+      (format java.time.format.DateTimeFormatter/ISO_INSTANT)))
+
 (defn generate-everything "Runs functions to generate feeds and pages"
   [path]
   (println "Scanning" (str path))
   (let [data (get-data path)]
     (println "Generating feeds")
-    (generate-feeds data (.. (java.time.ZonedDateTime/now)
-                             (format java.time.format.DateTimeFormatter/ISO_INSTANT)))
+    (generate-feeds data (whats-the-time))
     (println "Generating pages")
     (output-rendered data))
   (println "Generation complete"))
