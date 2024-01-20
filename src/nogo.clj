@@ -1,114 +1,139 @@
-(ns nogo
+(ns bogo
   (:require [clojure.string :as string]
+            [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.data.json :as json]
+            [clojure.pprint :refer [pprint]]
             [me.raynes.fs :as fs]
             [hickory.core :as hick]
             [hickory.render :refer [hickory-to-html]]
             [cljstache.core :as stache]))
 
+(def atom-template (io/resource "atom_templ.xml"))
 
-;;;; Static site generator: takes a folder of HTML files and turns them into a
-;;;; folder of HTML files. Also creates a TWTXT feed.
+(defn output-rendered "Loops over the pages to rendering and outputting them"
+  [data]
+  (doseq [folder (vals ((data :data) :folders))]
+    (println (str "Outputting folder: " (folder :name)))
+    (let [infolder (fs/file (data :rootpath) "input")
+          templfolder (fs/file infolder (folder :infolder) "template")
+          basefile (slurp (fs/file templfolder (folder :template)))
+          stylefile (slurp (fs/file templfolder (folder :style)))
+          header (slurp (fs/file templfolder (folder :header)))
+          footer (slurp (fs/file templfolder (folder :footer)))
+          outfolder (fs/file (data :rootpath) "output" (folder :outfolder))]
+      (fs/mkdirs outfolder)
+      (doseq [page (folder :pages)]
+        (let [outfile (fs/file outfolder (page :file))
+              main (slurp (fs/file infolder (folder :infolder) (page :file)))
+              rendered (stache/render basefile {:style stylefile
+                                                :header header
+                                                :footer footer
+                                                :main main})]
+          (println (str "Outputting page: " outfile))
+          (spit outfile rendered))))))
 
-
-(def templates_dir "./site/templates/")
-(def content_dir "./site/input/")
-(def output_dir "./site/output/")
-(def feeds_dir "./site/feeds/")
-
-
-;(html/deftemplate templ-article templates_dir_dir
-;  [templates article frontmatter]
-;  [:head :title] (html/content (str "Domson.dev - " (:data-title frontmatter)))
-;  [:head :style] (html/html-content (templates "style"))
-;  [:body :div.header] (html/html-content (templates "header"))
-;  [:body :main] (html/content article)
-;  [:body :div.footer] (html/html-content (templates "footer")))
-
-
-(defn get-templates "Gets a map of template file names to paths" []
-  (let [files (map str (fs/list-dir templates_dir))
-        names (map fs/name files)]
-    (zipmap names (map slurp files))))
-
-
-(defn find-frontmatter "Extracts the front matter from HTML"
-  [frags]
-  (:attrs (first (filter #(= (:content (:attrs %)) "front-matter") frags))))
-
-
-(defn find-article "Extracts the article from HTML"
-  [frags]
-  (:content (first (filter #(= (:tag %) :article) frags))))
-
-
-(defn process-page "Parses HTML into a map of frontmatter and article"
-  [page]
-  (let [frags (->> page hick/parse-fragment (map hick/as-hickory))]
-    {:frontmatter (find-frontmatter frags)
-     :article (find-article frags)}))
-
-
-(defn render-project-page "Associates the :rendered template in the page map"
-  [templates page]
-  (let [rendered (stache/render
-                   (templates "template_base")
-                   {:title (str "Domson.dev - " (:data-title (:frontmatter page)))
-                    :style (templates "style")
-                    :header (templates "header")
-                    :main (mapv hickory-to-html (:article page))
-                    :footer (templates "footer")})]
-    (assoc page :rendered rendered)))
-
-
-(defn render-page "Calls the different page rendering functions by article-type"
-  [templates page]
-  (let [processed-page (process-page page)
-        type (:data-article-type (:frontmatter processed-page))]
-    (cond
-      (= type "project") (render-project-page templates processed-page))))
-
-
-(defn output-html "Creates the output HTML file for a page"
-  [rendered-page]
-  (let [frontmatter (:frontmatter rendered-page)
-        filepath (str output_dir (:data-slug frontmatter) ".html")]
-    (prn (str "Outputting " (:data-slug frontmatter)))
-    (spit filepath (:rendered rendered-page))))
-
+(defn get-meta "Makes a list of metadata for each page, for feeds"
+  [data]
+  (for [folder (vals ((data :data) :folders))
+        page (folder :pages)]
+    (let [root ((data :data) :url)
+          folderpath (folder :outfolder)
+          folderstr (if-not (empty? folderpath) (str folderpath "/") "")
+          url (str root "/" folderstr (page :file))]
+      (merge page {:folder (folder :name) :url url}))))
 
 (defn page-to-twtxt "Creates a TWTXT entry from a page"
   [page]
-  (let [frontmatter (:frontmatter page)]
-    (str (:data-date frontmatter)
-         "T00:00\t"
-         (:data-title frontmatter)
-         " https://domson.dev/"
-         (:data-slug frontmatter)
-         ".html")))
+  (str (page :date) "T00:00Z\t" (page :title) " " (page :url)))
 
+(defn generate-twtxt "Generates and outputs the TWTXT feed"
+  [info]
+  (let [outfile (fs/file (info :outfolder) "twtxt.txt")
+        twtxt (string/join "\n" (map page-to-twtxt (info :entries)))]
+    (println (str "Outputting feed: " outfile))
+    (fs/mkdirs (info :outfolder))
+    (spit outfile twtxt)))
 
-(defn output-twtxt "Creates a TWTXT feed of the posts"
-  [pages]
-  (let [entries (sort (map page-to-twtxt pages))
-        all-entries (str (string/join "\n" entries) "\n")]
-    (spit (str feeds_dir "twtxt.txt") (str all-entries))))
+(defn page-to-json "Creates a JSON feed item from a page"
+  [page]
+  {:id (page :url)
+   :title (page :title)
+   :url (page :url)
+   :content_text (page :summary)
+   :tags [(page :folder)]
+   :date_published (str (page :date) "T00:00Z")})
 
+(defn generate-jsonfeed "Generates and outputs the JSON feed"
+  [info]
+  (let [outfile (fs/file (info :outfolder) "feed.json")
+        entries (map page-to-json (info :entries))
+        feedmap {:version "https://jsonfeed.org/version/1.1"
+                 :title (info :feedtitle)
+                 :home_page_url (info :feedlink)
+                 :feed_url (info :selflink)
+                 :authors [{:name (info :authorname)}]
+                 :items entries}]
+    (println (str "Outputting feed: " outfile))
+    (spit outfile (json/write-str feedmap))))
 
-(defn output-all "Outputs a page in all forms"
-  [rendered-pages]
-  (println (count rendered-pages) "pages")
-  (output-twtxt rendered-pages)
-  (mapv output-html rendered-pages))
+(defn generate-atom "Generates and outputs the ATOM feed"
+  [info]
+  (let [outfile (fs/file (info :outfolder) "atom.xml")
+        rendered (stache/render (slurp atom-template)
+                                {:entries (info :entries)
+                                 :feedtitle (info :feedtitle)
+                                 :feedlink (info :feedlink)
+                                 :selflink (str (info :selflink) "/atom.xml")
+                                 :authorname (info :authorname)
+                                 :feedid (info :feedid)
+                                 :updated (info :updated)})]
+    (println (str "Outputting feed: " outfile))
+    (fs/mkdirs (info :outfolder))
+    (spit outfile rendered)))
 
+(defn generate-feeds "Generates and outputs the ATOM feed"
+  [data time]
+  (let [info {:outfolder (fs/file (data :rootpath) "output"
+                                  ((data :data) :feedsdir))
+              :entries (get-meta data)
+              :updated time
+              :authorname (get-in data [:data :authorname])
+              :feedid (get-in data [:data :feedid])
+              :feedtitle (get-in data [:data :title])
+              :feedlink (get-in data [:data :url])
+              :selflink (string/join "/" [(get-in data [:data :url])
+                                          (get-in data [:data :feedsdir])])}]
+    (generate-atom info)
+    (generate-jsonfeed info)
+    (generate-twtxt info)))
+
+(defn get-data "Parses the Nogo EDN file"
+  [path]
+  (let [filepath (fs/file path "input" "nogo.edn")
+        nogofile (slurp filepath)
+        parsed (edn/read-string nogofile)]
+    {:data parsed :rootpath (fs/file path)}))
+
+(defn generate-everything "Runs functions to generate feeds and pages"
+  [path]
+  (println "Scanning" (str path))
+  (let [data (get-data path)]
+    (println "Generating feeds")
+    (generate-feeds data (.. (java.time.ZonedDateTime/now)
+                             (format java.time.format.DateTimeFormatter/ISO_INSTANT)))
+    (println "Generating pages")
+    (output-rendered data))
+  (println "Generation complete"))
+
+(defn usage []
+  (println "Usage:")
+  (println "\tNot like that"))
 
 (defn -main []
-  (println "Nogo Static Site Generator")
-  (println (str fs/*cwd* "/site/templates/template_base.html"))
-  (let [pages (map slurp (fs/list-dir content_dir))
-        templates (get-templates)
-        rendered (map #(render-page templates %) pages)]
-    (output-all rendered)))
-
+  (println "Bogo Static Site Generator")
+  (if-let [args *command-line-args*]
+    (generate-everything (fs/normalized (first args)))
+    (usage)))
 
 (-main)
-
