@@ -1,4 +1,4 @@
-(ns bogo
+(ns nogo
   (:require [clojure.string :as string]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
@@ -7,7 +7,8 @@
             [me.raynes.fs :as fs]
             [hickory.core :as hick]
             [hickory.render :refer [hickory-to-html]]
-            [cljstache.core :as stache]))
+            [cljstache.core :as stache]
+            [clojure.data.xml :as xml]))
 
 (def atom-template (io/resource "atom_templ.xml"))
 
@@ -77,6 +78,16 @@
     (println (str "Outputting feed: " outfile))
     (spit outfile (json/write-str feedmap))))
 
+(defn generate-sitemap "Generates an XML sitemap"
+  [info]
+  (let [outfile (fs/file (info :outfolder) "sitemap.xml")
+        sitemap (xml/sexp-as-element
+                 [:urlset {:xmlns "http://www.sitemaps.org/schemas/sitemap/0.9"}
+                  (map (fn [page]
+                         [:url [:loc (page :url)] [:lastmod (page :date)]])
+                       (info :entries))])]
+    (spit outfile (xml/emit-str sitemap))))
+
 (defn generate-atom "Generates and outputs the ATOM feed"
   [info]
   (let [outfile (fs/file (info :outfolder) "atom.xml")
@@ -105,6 +116,7 @@
               :selflink (string/join "/" [(get-in data [:data :url])
                                           (get-in data [:data :feedsdir])])}]
     (generate-atom info)
+    (generate-sitemap info)
     (generate-jsonfeed info)
     (generate-twtxt info)))
 
