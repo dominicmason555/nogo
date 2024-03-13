@@ -11,6 +11,7 @@
             [clojure.data.xml :as xml]))
 
 (def atom-template (io/resource "atom_templ.xml"))
+(def sitemap-xsl-link "<?xml-stylesheet type=\"text/xsl\" href=\"sitemap.xsl\"?>")
 
 (defn output-rendered "Loops over the pages to rendering and outputting them"
   [data]
@@ -78,6 +79,11 @@
     (println (str "Outputting feed: " outfile))
     (spit outfile (json/write-str feedmap))))
 
+(defn add-sitemap-xsl "Adds a link to the XSL sheet for the sitemap"
+  [xmlstr]
+  (let [pos (+ 2 (string/index-of xmlstr "?>"))]
+    (str (subs xmlstr 0 pos) sitemap-xsl-link (subs xmlstr pos))))
+
 (defn generate-sitemap "Generates an XML sitemap"
   [info]
   (let [outfile (fs/file (info :outfolder) "sitemap.xml")
@@ -86,7 +92,7 @@
                   (map (fn [page]
                          [:url [:loc (page :url)] [:lastmod (page :date)]])
                        (info :entries))])]
-    (spit outfile (xml/emit-str sitemap))))
+    (spit outfile (add-sitemap-xsl (xml/emit-str sitemap)))))
 
 (defn generate-atom "Generates and outputs the ATOM feed"
   [info]
@@ -143,7 +149,7 @@
   (println "\tNot like that"))
 
 (defn -main []
-  (println "Bogo Static Site Generator")
+  (println "Nogo Static Site Generator")
   (if-let [args *command-line-args*]
     (generate-everything (fs/normalized (first args)))
     (usage)))

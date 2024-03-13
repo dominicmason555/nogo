@@ -1,0 +1,10 @@
+{
+  :tasks
+  {
+    gen
+    {
+      :doc "Generates the website"
+      :task (shell "clj -M src/nogo.clj ../site")
+    }
+  }
+}
