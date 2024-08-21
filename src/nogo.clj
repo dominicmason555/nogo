@@ -3,15 +3,37 @@
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.data.json :as json]
-            [clojure.pprint :refer [pprint]]
+            [clojure.data.xml :as xml]
+            ;; [clojure.pprint :refer [pprint]]
+            ;; [hickory.core :as hick]
+            ;; [hickory.render :refer [hickory-to-html]]
+            [hiccup2.core :as hc]
             [me.raynes.fs :as fs]
-            [hickory.core :as hick]
-            [hickory.render :refer [hickory-to-html]]
-            [cljstache.core :as stache]
-            [clojure.data.xml :as xml]))
+            [cljstache.core :as stache]))
 
 (def atom-template (io/resource "atom_templ.xml"))
 (def sitemap-xsl-link "<?xml-stylesheet type=\"text/xsl\" href=\"sitemap.xsl\"?>")
+
+(defn get-meta "Makes a list of metadata for each page, for feeds"
+  [data]
+  (for [folder (vals ((data :data) :folders))
+        page (folder :pages)]
+    (let [root ((data :data) :url)
+          folderpath (folder :outfolder)
+          folderstr (if-not (empty? folderpath) (str folderpath "/") "")
+          url (str root "/" folderstr (page :file))]
+      (merge page {:folder (folder :name) :url url}))))
+
+(defn page-to-hfeed "Creates an h-feed HTML item from a page"
+  [page]
+  [:li
+   [:article.h-entry
+    [:time.dt-published
+     {:datetime (str (page :date) " 00:00:00")} (page :date)]
+    " - "
+    [:a.u-url.plain {:href (page :url)} (page :title)]
+    " - "
+    [:span.p-summary (page :summary)]]])
 
 (defn output-rendered "Loops over the pages to rendering and outputting them"
   [data]
@@ -23,7 +45,9 @@
           stylefile (slurp (fs/file templfolder (folder :style)))
           header (slurp (fs/file templfolder (folder :header)))
           footer (slurp (fs/file templfolder (folder :footer)))
-          outfolder (fs/file (data :rootpath) "output" (folder :outfolder))]
+          outfolder (fs/file (data :rootpath) "output" (folder :outfolder))
+          h-entries (map page-to-hfeed (reverse (get-meta data)))
+          h-feed (hc/html [:ul h-entries])]
       (fs/mkdirs outfolder)
       (doseq [page (folder :pages)]
         (let [outfile (fs/file outfolder (page :file))
@@ -31,19 +55,10 @@
               rendered (stache/render basefile {:style stylefile
                                                 :header header
                                                 :footer footer
-                                                :main main})]
+                                                :main main
+                                                :hfeed h-feed})]
           (println (str "Outputting page: " outfile))
           (spit outfile rendered))))))
-
-(defn get-meta "Makes a list of metadata for each page, for feeds"
-  [data]
-  (for [folder (vals ((data :data) :folders))
-        page (folder :pages)]
-    (let [root ((data :data) :url)
-          folderpath (folder :outfolder)
-          folderstr (if-not (empty? folderpath) (str folderpath "/") "")
-          url (str root "/" folderstr (page :file))]
-      (merge page {:folder (folder :name) :url url}))))
 
 (defn page-to-twtxt "Creates a TWTXT entry from a page"
   [page]
@@ -109,7 +124,7 @@
     (fs/mkdirs (info :outfolder))
     (spit outfile rendered)))
 
-(defn generate-feeds "Generates and outputs the ATOM feed"
+(defn generate-feeds "Generates and outputs the feeds"
   [data time]
   (let [info {:outfolder (fs/file (data :rootpath) "output"
                                   ((data :data) :feedsdir))
