@@ -4,9 +4,6 @@
             [clojure.java.io :as io]
             [clojure.data.json :as json]
             [clojure.data.xml :as xml]
-            ;; [clojure.pprint :refer [pprint]]
-            ;; [hickory.core :as hick]
-            ;; [hickory.render :refer [hickory-to-html]]
             [hiccup2.core :as hc]
             [me.raynes.fs :as fs]
             [cljstache.core :as stache]))
@@ -29,11 +26,23 @@
   [:li
    [:article.h-entry
     [:time.dt-published
-     {:datetime (str (page :date) " 00:00:00")} (page :date)]
+     {:datetime (str (page :date) "T00:00Z")} (page :date)]
+    ": "
+    [:span.p-category (page :folder)]
     " - "
-    [:a.u-url.plain {:href (page :url)} (page :title)]
-    " - "
-    [:span.p-summary (page :summary)]]])
+    [:a.u-url.p-name.plain {:href (page :url)} (page :title)]
+    [:p.p-summary (page :summary)]]])
+
+(defn generate-jsonld "Generates a JSON-LD context from the input EDN"
+  [data]
+  (json/write-str {:url (data :url)
+                   :headline (data :title)
+                   "@context" "https://schema.org"
+                   "@type" "Blog"
+                   :author {"@type" "Person"
+                            :name (data :authorname)
+                            :url (data :url)}}
+                  :escape-slash false))
 
 (defn output-rendered "Loops over the pages to rendering and outputting them"
   [data]
@@ -46,8 +55,9 @@
           header (slurp (fs/file templfolder (folder :header)))
           footer (slurp (fs/file templfolder (folder :footer)))
           outfolder (fs/file (data :rootpath) "output" (folder :outfolder))
-          h-entries (map page-to-hfeed (reverse (get-meta data)))
-          h-feed (hc/html [:ul h-entries])]
+          h-entries (map page-to-hfeed (reverse (rest (get-meta data))))
+          h-feed (hc/html [:div.h-feed [:ul h-entries]])
+          jsonld (generate-jsonld (data :data))]
       (fs/mkdirs outfolder)
       (doseq [page (folder :pages)]
         (let [outfile (fs/file outfolder (page :file))
@@ -56,6 +66,7 @@
                                                 :header header
                                                 :footer footer
                                                 :main main
+                                                :jsonld jsonld
                                                 :hfeed h-feed})]
           (println (str "Outputting page: " outfile))
           (spit outfile rendered))))))
