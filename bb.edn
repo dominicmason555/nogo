@@ -1,10 +1,7 @@
-{
-  :tasks
-  {
-    gen
-    {
-      :doc "Generates the website"
-      :task (shell "clj -M src/nogo.clj ../site")
-    }
-  }
-}
+{:tasks
+ {gen
+  {:doc "Generates the website"
+   :task (shell "clj -X nogo/-main :folder ../domson.dev")}
+  test
+  {:doc "Runs tests on nogo"
+   :task (shell "clj -M:test")}}}

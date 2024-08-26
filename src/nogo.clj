@@ -33,6 +33,22 @@
     [:a.u-url.p-name.plain {:href (page :url)} (page :title)]
     [:p.p-summary (page :summary)]]])
 
+(defn get-flat-pages "Gets a flat list of all pages, rather than a folder tree"
+  [data]
+  (let [folders (data :folders)]
+    (flatten (map :pages (vals folders)))))
+  ;;  (flatten (map (fn [folder] (assoc (folders))) folders))))
+
+(defn page-to-jsonld "Creates a JSON-LD BlogPosting item from a page"
+  [page]
+  {"@type" "BlogPosting"
+   :id (page :url)
+   :name (page :title)
+   :url (page :url)
+   :description (page :summary)
+   :keywords [(page :folder)]
+   :datePublished (page :date)})
+
 (defn generate-jsonld "Generates a JSON-LD context from the input EDN"
   [data]
   (json/write-str {:url (data :url)
@@ -41,7 +57,8 @@
                    "@type" "Blog"
                    :author {"@type" "Person"
                             :name (data :authorname)
-                            :url (data :url)}}
+                            :url (data :url)}
+                   :blogPost (map page-to-jsonld (data :pages))}
                   :escape-slash false))
 
 (defn output-rendered "Loops over the pages to rendering and outputting them"
@@ -103,7 +120,7 @@
                  :authors [{:name (info :authorname)}]
                  :items entries}]
     (println (str "Outputting feed: " outfile))
-    (spit outfile (json/write-str feedmap))))
+    (spit outfile (json/write-str feedmap :escape-slash false))))
 
 (defn add-sitemap-xsl "Adds a link to the XSL sheet for the sitemap"
   [xmlstr]
@@ -127,7 +144,7 @@
                                 {:entries (info :entries)
                                  :feedtitle (info :feedtitle)
                                  :feedlink (info :feedlink)
-                                 :selflink (str (info :selflink) "/atom.xml")
+                                 :selflink (str (info :selflink) "atom.xml")
                                  :authorname (info :authorname)
                                  :feedid (info :feedid)
                                  :updated (info :updated)})]
@@ -170,14 +187,7 @@
     (output-rendered data))
   (println "Generation complete"))
 
-(defn usage []
-  (println "Usage:")
-  (println "\tNot like that"))
-
-(defn -main []
+(defn -main [args]
   (println "Nogo Static Site Generator")
-  (if-let [args *command-line-args*]
-    (generate-everything (fs/normalized (first args)))
-    (usage)))
+  (generate-everything (str (args :folder))))
 
-(-main)
