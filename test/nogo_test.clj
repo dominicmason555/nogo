@@ -16,16 +16,18 @@
 
 (use-fixtures :once nogo-config-fixture)
 
-(def expected-flat-pages
-  '({:title "index", :date "1970-01-01", :file "index.html", :summary "Index Summary"}
-    {:title "Blog title 1", :date "1970-01-02", :file "blog1.html", :summary "Blog summary 1"}
-    {:title "Blog title 2", :date "1970-01-2", :file "blog2.html", :summary "Blog summary 2"}))
-
-(deftest get-flat-pages-test
-  (testing "get-flat-pages"
-    (let [flat-pages (nogo/get-flat-pages *test-config*)]
-      (is (= flat-pages expected-flat-pages)))))
+(def expected-page-to-jsonld-test
+  {"@type" "BlogPosting"
+   :id "https://url/blog/blog1.html"
+   :name "Blog title 1"
+   :url "https://url/blog/blog1.html"
+   :description "Blog summary 1"
+   :articleSection "blog name"
+   :keywords ["blog name"]
+   :dateCreated "1970-01-02"
+   :datePublished "1970-01-02"})
 
 (deftest page-to-jsonld-test
   (testing "page-to-jsonld"
-    (let [])))
+    (let [page (second (nogo/get-meta {:data *test-config*}))]
+      (is (= expected-page-to-jsonld-test (nogo/page-to-jsonld page))))))

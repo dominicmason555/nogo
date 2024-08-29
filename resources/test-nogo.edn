@@ -27,6 +27,6 @@
                            :file "blog1.html"
                            :summary "Blog summary 1"}
                           {:title "Blog title 2"
-                           :date "1970-01-2"
+                           :date "1970-01-03"
                            :file "blog2.html"
                            :summary "Blog summary 2"}]}}}

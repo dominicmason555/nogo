@@ -13,13 +13,14 @@
 
 (defn get-meta "Makes a list of metadata for each page, for feeds"
   [data]
-  (for [folder (vals ((data :data) :folders))
-        page (folder :pages)]
-    (let [root ((data :data) :url)
-          folderpath (folder :outfolder)
-          folderstr (if-not (empty? folderpath) (str folderpath "/") "")
-          url (str root "/" folderstr (page :file))]
-      (merge page {:folder (folder :name) :url url}))))
+  (sort-by :date
+    (for [folder (vals ((data :data) :folders))
+          page (folder :pages)]
+      (let [root ((data :data) :url)
+            folderpath (folder :outfolder)
+            folderstr (if-not (empty? folderpath) (str folderpath "/") "")
+            url (str root "/" folderstr (page :file))]
+        (merge page {:folder (folder :name) :url url})))))
 
 (defn page-to-hfeed "Creates an h-feed HTML item from a page"
   [page]
@@ -33,12 +34,6 @@
     [:a.u-url.p-name.plain {:href (page :url)} (page :title)]
     [:p.p-summary (page :summary)]]])
 
-(defn get-flat-pages "Gets a flat list of all pages, rather than a folder tree"
-  [data]
-  (let [folders (data :folders)]
-    (flatten (map :pages (vals folders)))))
-  ;;  (flatten (map (fn [folder] (assoc (folders))) folders))))
-
 (defn page-to-jsonld "Creates a JSON-LD BlogPosting item from a page"
   [page]
   {"@type" "BlogPosting"
@@ -47,6 +42,8 @@
    :url (page :url)
    :description (page :summary)
    :keywords [(page :folder)]
+   :articleSection (page :folder)
+   :dateCreated (page :date)
    :datePublished (page :date)})
 
 (defn generate-jsonld "Generates a JSON-LD context from the input EDN"
@@ -58,7 +55,7 @@
                    :author {"@type" "Person"
                             :name (data :authorname)
                             :url (data :url)}
-                   :blogPost (map page-to-jsonld (data :pages))}
+                   :blogPost (map page-to-jsonld (get-meta {:data data}))}
                   :escape-slash false))
 
 (defn output-rendered "Loops over the pages to rendering and outputting them"
@@ -72,7 +69,7 @@
           header (slurp (fs/file templfolder (folder :header)))
           footer (slurp (fs/file templfolder (folder :footer)))
           outfolder (fs/file (data :rootpath) "output" (folder :outfolder))
-          h-entries (map page-to-hfeed (reverse (rest (get-meta data))))
+          h-entries (map page-to-hfeed (butlast (reverse (get-meta data))))
           h-feed (hc/html [:div.h-feed [:ul h-entries]])
           jsonld (generate-jsonld (data :data))]
       (fs/mkdirs outfolder)
@@ -187,7 +184,7 @@
     (output-rendered data))
   (println "Generation complete"))
 
-(defn -main [args]
+(defn -main [folderpath]
   (println "Nogo Static Site Generator")
-  (generate-everything (str (args :folder))))
+  (generate-everything folderpath))
 
