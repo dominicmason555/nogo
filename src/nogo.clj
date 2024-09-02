@@ -11,16 +11,27 @@
 (def atom-template (io/resource "atom_templ.xml"))
 (def sitemap-xsl-link "<?xml-stylesheet type=\"text/xsl\" href=\"sitemap.xsl\"?>")
 
+(defn index-maps "Adds the key `index` to each map element of a sequence"
+  [mapseq]
+  (map #(assoc (second %) :index (first %))
+       (seq (zipmap (range) mapseq))))
+
+(defn get-prev-next "Gets the prev/next from a seq of maps by :index"
+  [data index]
+  (let [before-after [(dec index) (inc index)]
+        in-range (filter #(> (count data) % -1) before-after)]
+    (map data in-range)))
+
 (defn get-meta "Makes a list of metadata for each page, for feeds"
   [data]
   (sort-by :date
-    (for [folder (vals ((data :data) :folders))
-          page (folder :pages)]
-      (let [root ((data :data) :url)
-            folderpath (folder :outfolder)
-            folderstr (if-not (empty? folderpath) (str folderpath "/") "")
-            url (str root "/" folderstr (page :file))]
-        (merge page {:folder (folder :name) :url url})))))
+           (for [folder (vals ((data :data) :folders))
+                 page (folder :pages)]
+             (let [root ((data :data) :url)
+                   folderpath (folder :outfolder)
+                   folderstr (if-not (empty? folderpath) (str folderpath "/") "")
+                   url (str root "/" folderstr (page :file))]
+               (merge page {:folder (folder :name) :url url})))))
 
 (defn page-to-hfeed "Creates an h-feed HTML item from a page"
   [page]
@@ -73,16 +84,19 @@
           h-feed (hc/html [:div.h-feed [:ul h-entries]])
           jsonld (generate-jsonld (data :data))]
       (fs/mkdirs outfolder)
-      (doseq [page (folder :pages)]
-        (let [outfile (fs/file outfolder (page :file))
+      (doseq [[page index] (zipmap (folder :pages) (range))]
+        (let [prev-next (get-prev-next (folder :pages) index)
+              pnfeed (hc/html [:div.h-feed [:ul (map page-to-hfeed prev-next)]])
+              outfile (fs/file outfolder (page :file))
               main (slurp (fs/file infolder (folder :infolder) (page :file)))
               rendered (stache/render basefile {:style stylefile
                                                 :header header
                                                 :footer footer
                                                 :main main
                                                 :jsonld jsonld
-                                                :hfeed h-feed})]
-          (println (str "Outputting page: " outfile))
+                                                :hfeed h-feed
+                                                :prev-next pnfeed})]
+          (println (str "Outputting page " index " " outfile))
           (spit outfile rendered))))))
 
 (defn page-to-twtxt "Creates a TWTXT entry from a page"

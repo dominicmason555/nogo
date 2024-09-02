@@ -31,3 +31,15 @@
   (testing "page-to-jsonld"
     (let [page (second (nogo/get-meta {:data *test-config*}))]
       (is (= expected-page-to-jsonld-test (nogo/page-to-jsonld page))))))
+
+(deftest index-maps-test
+  (testing "index-maps"
+    (is (= (nogo/index-maps [{:a "a"} {:b "b"} {}])
+           [{:a "a" :index 0} {:b "b" :index 1} {:index 2}]))))
+
+(deftest get-prev-next-test
+  (testing "get-prev-next"
+    (let [test-input [{:a "a"} {:b "b"} {:c "c"}]]
+      (is (= (nogo/get-prev-next test-input 0) [{:b "b"}]))
+      (is (= (nogo/get-prev-next test-input 1) [{:a "a"} {:c "c"}]))
+      (is (= (nogo/get-prev-next test-input 2) [{:b "b"}])))))
