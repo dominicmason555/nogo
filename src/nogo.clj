@@ -18,9 +18,9 @@
 
 (defn get-prev-next "Gets the prev/next from a seq of maps by :index"
   [data index]
-  (let [before-after [(dec index) (inc index)]
-        in-range (filter #(> (count data) % -1) before-after)]
-    (map data in-range)))
+  (let [prev-next {:prev (dec index) :next (inc index)}
+        in-range (into {} (filter #(> (count data) (second %) -1) prev-next))]
+    (into {} (map #(vector (first %) (data (second %))) in-range))))
 
 (defn get-meta "Makes a list of metadata for each page, for feeds"
   [data]
@@ -85,7 +85,7 @@
           jsonld (generate-jsonld (data :data))]
       (fs/mkdirs outfolder)
       (doseq [[page index] (zipmap (folder :pages) (range))]
-        (let [prev-next (get-prev-next (folder :pages) index)
+        (let [prev-next (vals (get-prev-next (folder :pages) index))
               pnfeed (hc/html [:div.h-feed [:ul (map page-to-hfeed prev-next)]])
               outfile (fs/file outfolder (page :file))
               main (slurp (fs/file infolder (folder :infolder) (page :file)))

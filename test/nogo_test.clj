@@ -40,6 +40,6 @@
 (deftest get-prev-next-test
   (testing "get-prev-next"
     (let [test-input [{:a "a"} {:b "b"} {:c "c"}]]
-      (is (= (nogo/get-prev-next test-input 0) [{:b "b"}]))
-      (is (= (nogo/get-prev-next test-input 1) [{:a "a"} {:c "c"}]))
-      (is (= (nogo/get-prev-next test-input 2) [{:b "b"}])))))
+      (is (= (nogo/get-prev-next test-input 0) {:next {:b "b"}}))
+      (is (= (nogo/get-prev-next test-input 1) {:prev {:a "a"} :next {:c "c"}}))
+      (is (= (nogo/get-prev-next test-input 2) {:prev {:b "b"}})))))
