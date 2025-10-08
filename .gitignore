@@ -7,3 +7,4 @@ gmi/
 .nrepl-port
 site/
 upload.ps1
+.direnv/
