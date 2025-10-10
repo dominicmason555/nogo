@@ -4,8 +4,8 @@
             [clojure.edn :as edn]
             [me.raynes.fs :as fs]
             [hickory.core :as hck]
-            [hickory.select :as hcks]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [html]))
 
 (defn in-parse-config
   "Reads the configuration file from `folderpath/nogo.edn`
@@ -26,8 +26,7 @@
   [filepath]
   (let [parsed (parse-html-page (slurp filepath))]
     (println "Parsing" (.getName filepath))
-    (pp/pprint (hcks/select (hcks/tag :h2) parsed))
-    parsed))
+    {:tree parsed :filepath filepath}))
 
 (defn in-parse-html
   "Identifies all HTML files under the `:pages` directory, reads and parses them
@@ -37,12 +36,19 @@
   (let [pages-folder (io/file (data :rootpath) ((data :config) :pages))
         page-files (filter #(and (.isFile %) (.endsWith (.getName %) ".html"))
                            (file-seq pages-folder))
-        page-map (zipmap page-files (map in-parse-html-file page-files))]
-    (assoc data :pages page-map)))
+        pages (map in-parse-html-file page-files)]
+    (assoc data :pages pages)))
+
+(defn extract-meta
+  "Extracts metadata from an HTML tree"
+  [data]
+  (println "Extracting Metadata")
+  (assoc data :pages (map html/extract-page-meta (data :pages))))
 
 (defn in-read-assets ""
-  [args])
-  ;(pp/pprint args))
+  [args]
+  (println "Reading Assets")
+  (pp/pprint args))
 
 (defn transform-pages ""
   [args]
@@ -61,6 +67,7 @@
   (->> folderpath
        in-parse-config
        in-parse-html
+       extract-meta
        in-read-assets
        transform-pages
        create-feeds
