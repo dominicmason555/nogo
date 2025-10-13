@@ -17,10 +17,12 @@
 
 (use-fixtures :once test-page-fixture)
 
-(deftest select-title-test
-  (testing html/extract-title
-    (let [parsed {:tree (main/parse-html-page *test-page*)}
-          extracted (html/extract-title parsed)
-          title (extracted :title)]
-      (is (= title "Test Page")))))
+(deftest extract-multi-test
+  (testing html/extract-multi
+    (let [parsed {:tree (html/parse-html-page *test-page*)}
+          extracted (html/extract-multi parsed)]
+      (and (is (= (extracted :title) "Test Page"))
+           (is (= (extracted :category) "Posts"))
+           (is (= (extracted :published) "2025-01-01T00:00Z"))
+           (is (= (extracted :summary) "This page is a test"))))))
 

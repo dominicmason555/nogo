@@ -16,15 +16,10 @@
         parsed (edn/read (java.io.PushbackReader. (io/reader filepath)))]
     {:config parsed :rootpath (fs/file folderpath)}))
 
-(defn parse-html-page
-  "Parses an HTML page from a string into a Hickory map"
-  [html]
-  (hck/as-hickory (hck/parse html)))
-
 (defn in-parse-html-file
   "Reads and parses a single HTML page"
   [filepath]
-  (let [parsed (parse-html-page (slurp filepath))]
+  (let [parsed (html/parse-html-page (slurp filepath))]
     (println "Parsing" (.getName filepath))
     {:tree parsed :filepath filepath}))
 
@@ -43,7 +38,7 @@
   "Extracts metadata from an HTML tree"
   [data]
   (println "Extracting Metadata")
-  (assoc data :pages (map html/extract-page-meta (data :pages))))
+  (assoc data :pages (map html/extract-multi (data :pages))))
 
 (defn in-read-assets ""
   [args]
