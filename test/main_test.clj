@@ -23,9 +23,16 @@
           data {:pages [parsed]}
           data-meta (main/extract-meta data)
           extracted (first (data-meta :pages))]
-      (pp/pprint data-meta)
       (and (is (= (extracted :title) "Test Page"))
            (is (= (extracted :category) "Posts"))
            (is (= (extracted :published) "2025-01-01T00:00Z"))
            (is (= (extracted :summary) "This page is a test"))))))
+
+(deftest consolidate-pieces-test
+  (testing main/consolidate-pieces
+    (let [parsed {:tree (html/parse-html-page *test-page*)}
+          extracted (html/extract-multi parsed)
+          data {:pages [extracted]}
+          consolidated (main/consolidate-pieces data)]
+      (is (= (consolidated :pieces) #{"posts/bigtable.html" "posts/base.css" "base.css"})))))
 

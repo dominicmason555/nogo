@@ -24,5 +24,9 @@
       (and (is (= (extracted :title) "Test Page"))
            (is (= (extracted :category) "Posts"))
            (is (= (extracted :published) "2025-01-01T00:00Z"))
-           (is (= (extracted :summary) "This page is a test"))))))
+           (is (= (extracted :summary) "This page is a test"))
+           (is (= (extracted :styles) ["base.css" "posts/base.css"]))
+           (is (= (extracted :fragments) ["posts/bigtable.html"]))
+           (is (= (extracted :feed-excluded) false))
+           (is (= (extracted :page-list-excluded) true))))))
 
