@@ -5,7 +5,8 @@
             [me.raynes.fs :as fs]
             [hickory.core :as hck]
             [clojure.java.io :as io]
-            [html]))
+            [html]
+            [feeds]))
 
 (defn in-parse-config
   "Reads the configuration file from `folderpath/nogo.edn`
