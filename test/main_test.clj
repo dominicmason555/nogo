@@ -24,6 +24,7 @@
           data-meta (main/extract-meta data)
           extracted (first (data-meta :pages))]
       (and (is (= (extracted :title) "Test Page"))
+           (is (= (extracted :path) "/Posts/Test-Page.html"))
            (is (= (extracted :category) "Posts"))
            (is (= (extracted :published) "2025-01-01T00:00Z"))
            (is (= (extracted :summary) "This page is a test"))))))

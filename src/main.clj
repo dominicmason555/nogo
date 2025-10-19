@@ -38,7 +38,7 @@
   "Extracts and associates all metadata from each page in `(data :pages)`"
   [data]
   (println "Extracting Metadata")
-  (assoc data :pages (map html/extract-multi (data :pages))))
+  (html/extract-all data))
 
 (defn consolidate-pieces
   "Takes all pieces found by [[extract-meta]] across all pages and consolidates

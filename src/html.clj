@@ -39,10 +39,18 @@
 (def extractors
   "Map of keys to selector functions that are used to parse metadata out of an
    HTML file. The keys in this map become keys in the map of the page also."
-  {:title (select-first-content (hcks/child (hcks/tag :header) (hcks/class :p-name)))
-   :category (select-first-content (hcks/child (hcks/tag :header) (hcks/tag :post-category)))
-   :published (select-attr (hcks/child (hcks/tag :header) (hcks/class :dt-published)) :datetime)
-   :summary (select-first-content (hcks/child (hcks/tag :header) (hcks/class :p-summary)))
+  {:title (select-first-content
+           (hcks/child (hcks/tag :header) (hcks/class :p-name) (hcks/tag :a)))
+   :path (select-attr
+          (hcks/child (hcks/tag :header) (hcks/class :p-name) (hcks/tag :a))
+          :href)
+   :category (select-first-content
+              (hcks/child (hcks/tag :header) (hcks/tag :post-category)))
+   :published (select-attr
+               (hcks/child (hcks/tag :header) (hcks/class :dt-published))
+               :datetime)
+   :summary (select-first-content
+             (hcks/child (hcks/tag :header) (hcks/class :p-summary)))
    :styles (select-all-content (hcks/tag :nogo-style))
    :fragments (select-all-content (hcks/tag :nogo-fragment))
    :feed-excluded (select-present? (hcks/tag :nogo-feed-exclude))
@@ -55,9 +63,15 @@
    associate the return value of `get-title-fn` called on the page map with the
    key `:title` in the page map."
   [page]
-  (letfn [(extract-reducer [page ext]
-            (assoc page (first ext) ((second ext) page)))]
+  (let [extract-reducer (fn [page ext]
+                          (assoc page (first ext) ((second ext) page)))]
     (reduce extract-reducer page extractors)))
+
+(defn extract-all
+  "Extracts all metadata from every page in the `:pages` key of `data`"
+  [data]
+  (let [local-extracted (mapv html/extract-multi (data :pages))]
+    (assoc data :pages local-extracted)))
 
 (defn transform-page
   [data page]
