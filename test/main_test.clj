@@ -2,10 +2,13 @@
   (:require [clojure.test :refer [is deftest testing use-fixtures]]
             [clojure.java.io :as io]
             [clojure.pprint :as pp]
+            [me.raynes.fs :as fs]
             [main]
             [html]))
 
 (def test-page-html (io/resource "test-page.html"))
+
+(def test-contents-folder (io/resource "test-site"))
 
 (def ^:dynamic *test-page* nil)
 
@@ -15,7 +18,17 @@
     (binding [*test-page* test-page]
       (test-fn))))
 
+(def ^:dynamic *test-contents* nil)
+
+(defn test-contents-fixture "Loads the test folder to a temp folder"
+  [test-fn]
+  (let [test-folder (fs/ephemeral-dir ".")]
+    (fs/copy-dir test-contents-folder test-folder)
+    (binding [*test-contents* test-folder]
+      (test-fn))))
+
 (use-fixtures :once test-page-fixture)
+(use-fixtures :each test-contents-fixture)
 
 (deftest extract-meta-test
   (testing main/extract-meta
@@ -37,3 +50,7 @@
           consolidated (main/consolidate-pieces data)]
       (is (= (consolidated :pieces) #{"posts/bigtable.html" "posts/base.css" "base.css"})))))
 
+(deftest gen-page-test
+  (let [folder *test-contents*]
+    (pp/pprint folder)
+    (pp/pprint (fs/list-dir folder))))
