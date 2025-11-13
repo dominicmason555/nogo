@@ -22,9 +22,9 @@
   [selector]
   #(map (fn [el] (first (el :content))) (hcks/select selector (% :tree))))
 
-(defn select-attr
+(defn select-first-attr
   "Returns a function that takes a parsed HTML tree and returns an attribute
-   of the HTML element that is selected by the [[hickory.select]] `selector`
+   of the first HTML element selected by the [[hickory.select]] `selector`
    argument, the attribute is specified as a keyword by the `attr` argument."
   [selector attr]
   #(((first (hcks/select selector (% :tree))) :attrs) attr))
@@ -34,19 +34,19 @@
    representing whether a given [[hickory.select]] `selector` found what it was
    looking for in the tree."
   [selector]
-  #(if (seq (hcks/select selector (% :tree))) true false))
+  #(boolean (seq (hcks/select selector (% :tree)))))
 
 (def extractors
   "Map of keys to selector functions that are used to parse metadata out of an
    HTML file. The keys in this map become keys in the map of the page also."
   {:title (select-first-content
            (hcks/child (hcks/tag :header) (hcks/class :p-name) (hcks/tag :a)))
-   :path (select-attr
+   :path (select-first-attr
           (hcks/child (hcks/tag :header) (hcks/class :p-name) (hcks/tag :a))
           :href)
    :category (select-first-content
               (hcks/child (hcks/tag :header) (hcks/tag :post-category)))
-   :published (select-attr
+   :published (select-first-attr
                (hcks/child (hcks/tag :header) (hcks/class :dt-published))
                :datetime)
    :summary (select-first-content
@@ -63,8 +63,8 @@
    associate the return value of `get-title-fn` called on the page map with the
    key `:title` in the page map."
   [page]
-  (let [extract-reducer (fn [page ext]
-                          (assoc page (first ext) ((second ext) page)))]
+  (letfn [(extract-reducer [page ext]
+            (assoc page (first ext) ((second ext) page)))]
     (reduce extract-reducer page extractors)))
 
 (defn extract-all
