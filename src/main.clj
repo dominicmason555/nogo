@@ -56,22 +56,27 @@
    replaces the set with a map of piece file paths to the contents of each
    file. The set of paths is used to prevent reading a file more than once."
   [data]
+  (doseq [piece (data :pieces)] (prn "piece" piece))
   (println "Reading" (count (data :pieces)) "pieces")
-  (assoc data :pieces (into {} (map #(vec [% (slurp %)]) (data :pieces)))))
+  (assoc data :pieces (into {} (map #(vec [% (slurp (fs/file (data :rootpath) %))]) (data :pieces)))))
 
 (defn create-feeds ""
   [data]
-  (println data))
+  (println "Creating feeds")
+  (println data)
+  data)
 
 (defn transform-pages
   "Applies all transforms to the trees of the pages, such as applying titles,
    in-place, using [[html/transform-page]]."
   [data]
+  (println "Data is" data)
   (println "Transforming" (count (data :pages)) "pages")
   (assoc data :pages (map #(html/transform-page data %) (data :pages))))
 
 (defn out-render-to-files ""
   [args]
+  (println "Outputting files")
   (println args))
 
 (defn generate-everything "All logic for static-site generation"

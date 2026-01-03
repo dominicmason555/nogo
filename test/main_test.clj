@@ -8,7 +8,8 @@
 
 (def test-page-html (io/resource "test-page.html"))
 
-(def test-contents-folder (io/resource "test-site"))
+(def test-contents-folder-name "test-site")
+(def test-contents-folder (io/resource test-contents-folder-name))
 
 (def ^:dynamic *test-page* nil)
 
@@ -24,7 +25,7 @@
   [test-fn]
   (let [test-folder (fs/ephemeral-dir ".")]
     (fs/copy-dir test-contents-folder test-folder)
-    (binding [*test-contents* test-folder]
+    (binding [*test-contents* (fs/file test-folder test-contents-folder-name)]
       (test-fn))))
 
 (use-fixtures :once test-page-fixture)
@@ -53,4 +54,5 @@
 (deftest gen-page-test
   (let [folder *test-contents*]
     (pp/pprint folder)
-    (pp/pprint (fs/list-dir folder))))
+    (pp/pprint (fs/list-dir folder))
+    (main/-main folder)))
