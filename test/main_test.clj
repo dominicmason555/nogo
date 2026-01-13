@@ -23,7 +23,7 @@
 
 (defn test-contents-fixture "Loads the test folder to a temp folder"
   [test-fn]
-  (let [test-folder (fs/ephemeral-dir ".")]
+  (let [test-folder (fs/temp-dir "nogo-test")]
     (fs/copy-dir test-contents-folder test-folder)
     (binding [*test-contents* (fs/file test-folder test-contents-folder-name)]
       (test-fn))))
@@ -55,4 +55,5 @@
   (let [folder *test-contents*]
     (pp/pprint folder)
     (pp/pprint (fs/list-dir folder))
-    (main/-main folder)))
+    (main/-main folder)
+    (pp/pprint (fs/list-dir folder))))

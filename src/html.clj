@@ -1,6 +1,8 @@
 (ns html
   (:require
+   [clojure.zip :as zip]
    [hickory.select :as hcks]
+   [hickory.zip :as hckz]
    [hickory.core :as hck]))
 
 (defn parse-html-page
@@ -73,6 +75,14 @@
   (let [local-extracted (mapv html/extract-multi (data :pages))]
     (assoc data :pages local-extracted)))
 
+(defn transform-css
+  [data loc]
+  (let [next-loc (hcks/select-next-loc (hcks/tag :nogo-style) loc)]
+    (if (nil? next-loc)
+      (zip/root loc)
+      (let [new-loc (zip/replace loc {:type :element, :tag :style, :content "the style goes here"})]
+        (recur data new-loc)))))
+
 (defn transform-page
   [data page]
-  page)
+  (assoc page :tree (transform-css data (hckz/hickory-zip (page :tree)))))

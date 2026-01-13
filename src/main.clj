@@ -3,7 +3,7 @@
             [clojure.pprint :as pp]
             [clojure.edn :as edn]
             [me.raynes.fs :as fs]
-            [hickory.core :as hck]
+            [hickory.render :as hckr]
             [clojure.java.io :as io]
             [html]
             [feeds]))
@@ -70,14 +70,20 @@
   "Applies all transforms to the trees of the pages, such as applying titles,
    in-place, using [[html/transform-page]]."
   [data]
-  (println "Data is" data)
   (println "Transforming" (count (data :pages)) "pages")
   (assoc data :pages (map #(html/transform-page data %) (data :pages))))
 
-(defn out-render-to-files ""
-  [args]
+(defn out-render-to-files
+  "Create the `outfolder` and render the transformed pages to files in it."
+  [data]
   (println "Outputting files")
-  (println args))
+  (let [outfolder (fs/file (data :rootpath) ((data :config) :outfolder))]
+    (doseq [page (data :pages)]
+      (let [outpath (fs/file outfolder (page :path))
+            html (hckr/hickory-to-html (page :tree))]
+        (fs/mkdirs (fs/parent outpath))
+        (println outpath)
+        (spit outpath html)))))
 
 (defn generate-everything "All logic for static-site generation"
   [folderpath]

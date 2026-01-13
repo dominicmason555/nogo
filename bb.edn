@@ -4,4 +4,9 @@
    :task (shell "clj -M -m nogo ../domson.dev")}
   test
   {:doc "Runs tests on nogo"
-   :task (shell "clj -M:test")}}}
+   :task (shell "clj -M:test")}
+  check-html
+  {:doc "Cleans the output directories, runs tests, shows HTML output"
+   :task (do (shell "fd -t d nogo /tmp -X rm -rf")
+             (shell "clj -M:test")
+             (shell "fd Test-Page.html /tmp -X bat"))}}}
